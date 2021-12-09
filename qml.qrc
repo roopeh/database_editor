@@ -6,5 +6,6 @@
         <file>Databases.qml</file>
         <file>QueryWindow.qml</file>
         <file>Content.qml</file>
+        <file>TableBar.qml</file>
     </qresource>
 </RCC>

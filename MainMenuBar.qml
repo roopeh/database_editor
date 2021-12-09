@@ -36,6 +36,6 @@ MenuBar {
     }
 
     background: Rectangle {
-        color: "#3b4d57";
+        color: "#3b4d57"
     }
 }

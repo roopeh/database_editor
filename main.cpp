@@ -2,6 +2,8 @@
 #include <QQmlApplicationEngine>
 #include <QThreadPool>
 
+#include "DataUpdater.hpp"
+
 int main(int argc, char *argv[])
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -13,6 +15,9 @@ int main(int argc, char *argv[])
 
     // Initialize multithreading
     QThreadPool::globalInstance()->setMaxThreadCount(QThread::idealThreadCount());
+
+    // Register C++ classes for QML
+    qmlRegisterType<DataUpdater>("DataUpdater", 0, 1, "DataUpdater");
 
     QGuiApplication app(argc, argv);
 

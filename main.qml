@@ -2,6 +2,8 @@ import QtQuick 2.15
 import QtQuick.Controls 2.12
 import QtQuick.Window 2.15
 
+import DataUpdater 0.1
+
 ApplicationWindow {
     id: mainWindowRoot
     visible: true
@@ -14,44 +16,63 @@ ApplicationWindow {
         setY(Screen.height / 2 - height / 2)
     }
 
-    Item {
-        id: mainWindow
+    // Qt C++ classes
+    DataUpdater { id: dataUpdater }
+
+    Rectangle {
+        id: mainWindowBackground
         anchors.fill: parent
 
-        Item {
-            id: mainBackground
-            anchors.fill: parent
-
-            Rectangle {
-                anchors.fill: parent
-                color: "#212b30"
-            }
-        }
+        color: "#212b30"
     }
 
     // Menu bar
-    menuBar: MainMenuBar {
-        id: mainMenuBar
+    Rectangle {
+        id: menuBar
+        width: parent.width
+        height: mainMenuBar.height
+
+        // Connection bar
+        MainMenuBar {
+            id: mainMenuBar
+            width: 300
+        }
+
+        // Table bar
+        TableBar {
+            id: tableBar
+            width: parent.width - mainMenuBar.width
+            height: mainMenuBar.height
+
+            anchors.top: parent.top
+            anchors.left: mainMenuBar.right
+        }
     }
 
     // Databases
     Databases {
         id: databaseList
-        width: 300
-        height: parent.height - mainMenuBar.height - queryWindow.height
+        width: mainMenuBar.width
+        height: parent.height - menuBar.height - queryWindow.height
 
-        anchors.top: mainMenuBar.bottom
+        anchors.top: menuBar.bottom
         anchors.bottom: queryWindow.top
         anchors.left: parent.left
+
+        MouseArea {
+            anchors.fill: parent
+
+            onClicked: { dataUpdater.loadSqlTable() }
+        }
     }
 
     // Content
     Content {
         id: contentWindow
         width: parent.width - databaseList.width
-        height: parent.height - mainMenuBar.height - queryWindow.height
+        height: parent.height - menuBar.height - queryWindow.height
 
-        anchors.top: mainMenuBar.bottom
+        anchors.top: menuBar.bottom
         anchors.left: databaseList.right
         anchors.bottom: queryWindow.top
     }
