@@ -8,11 +8,11 @@ Menu {
         contentItem: Text {
             text: menuItem.text
             font: menuItem.font
-            color: "#ababab"
+            color: defaultTextColor
         }
 
         background: Rectangle {
-            color: menuItem.highlighted ? "#577180" : "#3b4d57"
+            color: menuItem.highlighted ? defaultBorderColor : defaultContentBackgroundColor
         }
     }
 }

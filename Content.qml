@@ -34,9 +34,9 @@ Item {
         height: parent.height - 20
 
         border.width: 2
-        border.color: "#577180"
+        border.color: defaultBorderColor
 
-        color: "#212b30"
+        color: defaultMainBackgroundColor
 
         Rectangle {
             id: listRectangle
@@ -130,7 +130,7 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    color: textInput.focus ? "#3b4d57" : "#FFFFFF"
+                    color: textInput.focus ? defaultContentBackgroundColor : "#FFFFFF"
                     focus: true
                     z: -1
                 }

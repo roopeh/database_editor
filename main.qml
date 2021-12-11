@@ -1,8 +1,8 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.12
-import QtQuick.Window 2.15
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Window
 
-import DataUpdater 0.1
+import DataUpdater
 
 ApplicationWindow {
     id: mainWindowRoot
@@ -17,13 +17,27 @@ ApplicationWindow {
     }
 
     // Qt C++ classes
-    DataUpdater { id: dataUpdater }
+    DataUpdater {
+        id: dataUpdater
+        dbHostname: databaseList.getDbHostname()
+        dbUsername: databaseList.getDbUsername()
+        dbPassword: databaseList.getDbPassword()
+        dbDatabase: databaseList.getDbDatabase()
+        dbPort: databaseList.getDbPort()
+    }
+
+    // Global variables
+    // Colors
+    property color defaultMainBackgroundColor: "#212b30"
+    property color defaultContentBackgroundColor: "#3b4d57"
+    property color defaultBorderColor: "#577180"
+    property color defaultTextColor: "#ababab"
 
     Rectangle {
         id: mainWindowBackground
         anchors.fill: parent
 
-        color: "#212b30"
+        color: defaultMainBackgroundColor
     }
 
     // Menu bar
@@ -58,12 +72,6 @@ ApplicationWindow {
         anchors.top: menuBar.bottom
         anchors.bottom: queryWindow.top
         anchors.left: parent.left
-
-        MouseArea {
-            anchors.fill: parent
-
-            onClicked: { dataUpdater.loadSqlTable() }
-        }
     }
 
     // Content

@@ -1,10 +1,20 @@
-import QtQuick 2.15
+import QtQuick
+import QtQuick.Controls
 
 Item {
+    function testLog() {
+        for (var i = 0; i < 10; ++i)
+
+        queryText.text += /*"\n" +*/ queryText.rowCount + "> FOO BAR"
+        ++queryText.rowCount
+    }
+
+    // Outer background
     Rectangle {
         anchors.fill: parent
-        color: "#212b30"
+        color: defaultMainBackgroundColor
 
+        // Inner background
         Rectangle {
             anchors.left: parent.left
             anchors.leftMargin: 10
@@ -13,10 +23,41 @@ Item {
 
             width: parent.width - 20
             height: parent.height - 20 - topBorder.height
-            color: "#3b4d57"
+            color: defaultContentBackgroundColor
 
             border.width: 2
-            border.color: "#577180"
+            border.color: defaultBorderColor
+
+            // The actual content
+            ScrollView {
+                id: scrollView
+                width: parent.width
+                contentWidth: scrollViewScrollBar.visible ? width - scrollViewScrollBar.width : width
+                contentHeight: queryText.height
+                anchors.fill: parent
+                anchors.margins: 10
+
+                ScrollBar.vertical: ScrollBar {
+                    id: scrollViewScrollBar
+                    anchors.right: parent.right
+                    height: parent.height
+                }
+
+                // Disable horizontal scroll bar
+                ScrollBar.horizontal: ScrollBar {
+                    policy: ScrollBar.AlwaysOff
+                }
+
+                Text {
+                    id: queryText
+                    width: scrollView.contentWidth
+
+                    text: "FOO BAR"
+                    wrapMode: Text.Wrap
+
+                    property int rowCount: 1
+                }
+            }
         }
 
         // Top border
@@ -28,7 +69,7 @@ Item {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.leftMargin: 10
-            color: "#3b4d57"
+            color: defaultContentBackgroundColor
         }
     }
 }

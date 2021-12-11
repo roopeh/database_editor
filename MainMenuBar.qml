@@ -26,16 +26,16 @@ MenuBar {
         contentItem: Text {
             text: menuBarItem.text
             font: menuBarItem.font
-            color: "#ababab"
+            color: defaultTextColor
         }
 
         background: Rectangle {
             implicitWidth: 80
-            color: menuBarItem.highlighted ? "#577180" : "#3b4d57"
+            color: menuBarItem.highlighted ? defaultBorderColor : defaultContentBackgroundColor
         }
     }
 
     background: Rectangle {
-        color: "#3b4d57"
+        color: defaultContentBackgroundColor
     }
 }
