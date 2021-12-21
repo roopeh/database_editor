@@ -1,13 +1,10 @@
 #include "DataUpdater.hpp"
 
+#include <QColor>
 #include <QSqlDriver>
 #include <QSqlError>
 #include <QSqlField>
 #include <QSqlQuery>
-
-#ifdef USE_TABLE_MODEL
-#include <QSqlRecord>
-#endif
 
 DataUpdater::DataUpdater()
 {
@@ -26,7 +23,7 @@ DataUpdater::~DataUpdater()
     m_cityMap.clear();
 }
 
-void DataUpdater::loadSqlTable(uint8_t sortType)
+void DataUpdater::loadSqlTable(uint8_t sortType, bool firstLoad)
 {
     m_database.setHostName(dbHostname());
     m_database.setUserName(m_username);
@@ -34,45 +31,49 @@ void DataUpdater::loadSqlTable(uint8_t sortType)
     m_database.setDatabaseName(m_dbName);
     m_database.setPort(m_dbPort.toInt());
 
-    qDebug() << "Host: " << m_hostname << ", user: " << m_username << ", pass: " << m_password << ", name: " << m_dbName
-             << ", port: " << m_dbPort.toInt();
+    if (firstLoad)
+    {
+        const auto connectStr = "mysql -h " + dbHostname() + " -u " + dbUsername() + " -p";
+        writeQueryLog(connectStr);
+    }
+
     if (tryConnectDatabase())
     {
-        // Load all countries and cities to memory
-        loadAllCountries();
-        loadAllCities();
+        if (firstLoad)
+        {
+            writeDefaultLog("Connected to database");
+
+            // Load all countries and cities to memory
+            loadAllCountries();
+            loadAllCities();
+        }
 
         QSqlQuery query;
         if (sortType == 0)
-            query.prepare("SELECT customer_id, first_name, last_name FROM customer ORDER BY customer_id LIMIT 15");
+            query.prepare("SELECT customer_id, first_name, last_name FROM customer ORDER BY customer_id ASC");
         else
-            query.prepare("SELECT customer_id, first_name, last_name FROM customer ORDER BY last_name LIMIT 15");
+            query.prepare("SELECT customer_id, first_name, last_name FROM customer ORDER BY last_name ASC");
 
-        query.exec();
-#ifdef USE_TABLE_MODEL
-        auto* model = new QSqlQueryModel();
-        model->setQuery(query);
+        writeQueryLog(getExecutedSqlQuery(query));
 
-        for (uint8_t i = 0; i < model->query().record().count(); ++i)
-        {
-            const auto name = model->query().record().fieldName(i);
-            qDebug() << name;
-            model->setHeaderData(i, Qt::Horizontal, name);
-        }
+        if (!query.exec())
+            writeErrorLog(query.lastError().text());
+        else
+            writeAffectedRows(query.size());
 
-        emit loadNewTable(model);
-#else
         QVariantMap data;
         while (query.next())
         {
             const auto id = query.value(0).toString();
             const auto firstName = query.value(1).toString();
             const auto lastName = query.value(2).toString();
-            data.insert(id, QStringLiteral("%1, %2").arg(lastName, firstName));
+            if (sortType == 0)
+                data.insert(id, QStringLiteral("%1, %2").arg(lastName, firstName));
+            else
+                data.insert(QStringLiteral("%1, %2").arg(lastName, firstName), id);
         }
 
-        emit loadNewTable(data);
-#endif
+        emit loadNewTable(data, sortType);
     }
 
     m_database.close();
@@ -93,10 +94,12 @@ void DataUpdater::loadUserInfo(const uint32_t userId)
         query.addBindValue(userId);
         query.exec();
 
-        qDebug() << "TesT: " << getExecutedSqlQuery(query);
+        writeQueryLog(getExecutedSqlQuery(query));
 
         if (query.next())
         {
+            writeAffectedRows(query.size());
+
             setUserIdField(QString::number(userId));
             setUserFirstname(query.value(0).toString());
             setUserLastname(query.value(1).toString());
@@ -117,11 +120,68 @@ void DataUpdater::loadUserInfo(const uint32_t userId)
         }
         else
         {
-            qDebug() << "Error: " << query.lastError();
+            writeErrorLog(query.lastError().text());
         }
     }
 
     m_database.close();
+}
+
+bool DataUpdater::addUser()
+{
+    if (tryConnectDatabase())
+    {
+        // Must be done in two queries; one for user table and one for address table
+        QSqlQuery query;
+        query.prepare("INSERT INTO address "
+                      "(address, district, city_id, postal_code, phone, location) VALUES "
+                      "(?, ?, ?, ?, ?, POINT(0.0000,90.0000))");
+        query.addBindValue(userAddress());
+        query.addBindValue("null");
+        query.addBindValue(userCityId());
+        query.addBindValue(userPostalCode());
+        query.addBindValue(userPhoneNumber());
+
+        writeQueryLog(getExecutedSqlQuery(query));
+
+        if (!query.exec())
+        {
+            writeErrorLog(query.lastError().text());
+            m_database.close();
+            return false;
+        }
+
+        writeAffectedRows(query.numRowsAffected());
+
+        const auto addressId = query.lastInsertId();
+
+        query.clear();
+        query.prepare("INSERT INTO customer "
+                      "(customer_id, store_id, first_name, last_name, email, address_id) VALUES "
+                      "(?, ?, ?, ?, ?, ?)");
+        query.addBindValue(userIdField());
+        query.addBindValue(1);
+        query.addBindValue(userFirstname());
+        query.addBindValue(userLastname());
+        query.addBindValue(userEmail());
+        query.addBindValue(addressId);
+
+        writeQueryLog(getExecutedSqlQuery(query));
+
+        if (!query.exec())
+        {
+            writeErrorLog(query.lastError().text());
+            m_database.close();
+            return false;
+        }
+
+        writeAffectedRows(query.numRowsAffected());
+
+        m_database.close();
+        return true;
+    }
+
+    return false;
 }
 
 bool DataUpdater::updateUser()
@@ -142,21 +202,45 @@ bool DataUpdater::updateUser()
         query.addBindValue(userCityId());
         query.addBindValue(userIdField());
 
-        qDebug() << "TesT: " << getExecutedSqlQuery(query);
+        writeQueryLog(getExecutedSqlQuery(query));
 
-        bool result = false;
-        if (query.exec())
+        if (!query.exec())
         {
-            qDebug() << "success";
-            result = true;
+            writeErrorLog(query.lastError().text());
+            m_database.close();
+            return false;
         }
-        else
-        {
-            qDebug() << "error: " << query.lastError();
-        }
+
+        writeAffectedRows(query.numRowsAffected());
 
         m_database.close();
-        return result;
+        return true;
+    }
+
+    return false;
+}
+
+bool DataUpdater::removeUser()
+{
+    if (tryConnectDatabase())
+    {
+        QSqlQuery query;
+        query.prepare("DELETE FROM customer WHERE customer_id=?");
+        query.addBindValue(userIdField());
+
+        writeQueryLog(getExecutedSqlQuery(query));
+
+        if (!query.exec())
+        {
+            writeErrorLog(query.lastError().text());
+            m_database.close();
+            return false;
+        }
+
+        writeAffectedRows(query.numRowsAffected());
+
+        m_database.close();
+        return true;
     }
 
     return false;
@@ -234,17 +318,39 @@ QString DataUpdater::getCityNameById(const uint16_t id) const
     return QString();
 }
 
+void DataUpdater::writeDefaultLog(const QString message)
+{
+    const auto str = "<font color=\"#008000\">" + message + "</font>";
+    emit appendNewLogMessage(str);
+}
+
+void DataUpdater::writeAffectedRows(const int rows)
+{
+    const auto message = "Affected " + QString::number(rows) + " rows";
+    writeDefaultLog(message);
+}
+
+void DataUpdater::writeQueryLog(const QString message)
+{
+    const auto queryStr = "> " + message;
+    emit appendNewLogMessage(queryStr);
+}
+
+void DataUpdater::writeErrorLog(const QString message)
+{
+    const auto errorStr = "<font color=\"#FF0000\">" + message + "</font>";
+    emit appendNewLogMessage(errorStr);
+}
+
 bool DataUpdater::tryConnectDatabase()
 {
     if (!m_database.open())
     {
-        // todo: send error to query window
-        qDebug() << "Error in db connection: " << m_database.lastError();
+        writeErrorLog(m_database.lastError().text());
         emit connectedToDatabase(false);
         return false;
     }
 
-    // todo: send to query window??
     emit connectedToDatabase(true);
     return true;
 }
@@ -257,6 +363,17 @@ void DataUpdater::loadAllCountries()
         QVariantList data;
 
         QSqlQuery query("SELECT country_id, country from country ORDER BY country_id ASC");
+
+        writeQueryLog(query.lastQuery());
+        if (!query.exec())
+        {
+            writeErrorLog(query.lastError().text());
+            m_database.close();
+            return;
+        }
+
+        writeAffectedRows(query.size());
+
         while (query.next())
         {
             const auto countryId = query.value(0).toUInt();
@@ -277,6 +394,17 @@ void DataUpdater::loadAllCities()
         m_cityMap.clear();
 
         QSqlQuery query("SELECT city_id, city, country_id FROM city ORDER BY city_id ASC");
+
+        writeQueryLog(query.lastQuery());
+        if (!query.exec())
+        {
+            writeErrorLog(query.lastError().text());
+            m_database.close();
+            return;
+        }
+
+        writeAffectedRows(query.size());
+
         while (query.next())
         {
             const auto cityId = query.value(0).toUInt();

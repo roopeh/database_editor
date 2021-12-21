@@ -2,11 +2,14 @@ import QtQuick
 import QtQuick.Controls
 
 Item {
-    function testLog() {
-        for (var i = 0; i < 10; ++i)
+    Connections {
+        target: dataUpdater
 
-        queryText.text += /*"\n" +*/ queryText.rowCount + "> FOO BAR"
-        ++queryText.rowCount
+        function onAppendNewLogMessage(message) {
+            queryText.text += message + "<br>";
+
+            scrollView.scrollToBottom();
+        }
     }
 
     // Outer background
@@ -52,10 +55,15 @@ Item {
                     id: queryText
                     width: scrollView.contentWidth
 
-                    text: "FOO BAR"
+                    text: ""
+                    color: defaultTextColor
+                    font.pixelSize: 17
+                    textFormat: TextEdit.RichText
                     wrapMode: Text.Wrap
+                }
 
-                    property int rowCount: 1
+                function scrollToBottom() {
+                    ScrollBar.vertical.position = 1.0 - ScrollBar.vertical.size;
                 }
             }
         }

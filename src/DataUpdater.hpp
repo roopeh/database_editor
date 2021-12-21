@@ -1,15 +1,8 @@
 #pragma once
 
-//#define USE_TABLE_MODEL 1
-
 #include <QObject>
 #include <QSqlDatabase>
-
-#ifdef USE_TABLE_MODEL
-#include <QSqlQueryModel>
-#else
 #include <QVariant>
-#endif
 
 // Country id, Country name
 typedef QMap<uint8_t, QString> CountryMap;
@@ -23,10 +16,12 @@ public:
     DataUpdater();
    ~DataUpdater();
 
-    Q_INVOKABLE void loadSqlTable(uint8_t sortType);
+    Q_INVOKABLE void loadSqlTable(uint8_t sortType, bool firstLoad);
     Q_INVOKABLE void loadUserInfo(const uint32_t userId);
 
+    Q_INVOKABLE bool addUser();
     Q_INVOKABLE bool updateUser();
+    Q_INVOKABLE bool removeUser();
 
     Q_INVOKABLE uint8_t getCountryIdByName(const QString name) const;
     Q_INVOKABLE QString getCountryNameById(const uint8_t id) const;
@@ -34,6 +29,11 @@ public:
     Q_INVOKABLE void loadCitiesForCountryId(const uint8_t countryId);
     Q_INVOKABLE uint16_t getCityIdByName(const QString name) const;
     Q_INVOKABLE QString getCityNameById(const uint16_t id) const;
+
+    Q_INVOKABLE void writeDefaultLog(const QString message);
+    Q_INVOKABLE void writeAffectedRows(const int rows);
+    Q_INVOKABLE void writeQueryLog(const QString message);
+    Q_INVOKABLE void writeErrorLog(const QString message);
 
 private:
     bool tryConnectDatabase();
@@ -145,11 +145,7 @@ public:
     void setUserPhoneNumber(const QString phoneNumber);
 
 signals:
-#ifdef USE_TABLE_MODEL
-    void loadNewTable(QSqlQueryModel* model);
-#else
-    void loadNewTable(QVariantMap data);
-#endif
+    void loadNewTable(QVariantMap data, uint8_t sortType);
     void loadCountriesToList(QVariantList data);
     void loadCitiesToList(QVariantList data);
 
@@ -171,6 +167,8 @@ signals:
     void userPhoneNumberChanged();
     void setUserCountrySignal(const QString countryName);
     void setUserCitySignal(const QString cityName);
+
+    void appendNewLogMessage(QString message);
 
 private:
     QSqlDatabase m_database = QSqlDatabase();

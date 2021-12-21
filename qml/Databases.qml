@@ -159,16 +159,6 @@ Item {
                     font.pixelSize: defaultFontSize
                 }
 
-                /*Button {
-                    width: parent.width * 0.3
-                    height: width / 2
-                    anchors.left: parent.left
-                    anchors.bottom: parent.bottom
-                    text: "Query"
-
-                    onClicked: queryWindow.testLog()
-                }*/
-
                 Button {
                     id: connectButton
                     width: databaseHostname.width * 0.5
@@ -199,7 +189,7 @@ Item {
                         dataUpdater.dbDatabase = databaseDb.text
                         dataUpdater.dbPort = databasePort.text
 
-                        dataUpdater.loadSqlTable(0)
+                        dataUpdater.loadSqlTable(0, true)
                     }
                 }
             }

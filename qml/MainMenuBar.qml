@@ -1,23 +1,19 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Controls
 
 MenuBar {
     // Menus
     MainMenuItem {
-        title: qsTr("Foo")
-        Action { text: qsTr("Bar1") }
-        Action { text: qsTr("Bar2") }
+        title: qsTr("File")
         Action {
-            text: qsTr("Bar3")
+            text: qsTr("Quit")
             onTriggered: Qt.quit(); }
     }
 
     MainMenuItem {
         id: barMenu
-        title: qsTr("Bar")
-        Action { text: qsTr("Foo1") }
-        Action { text: qsTr("Foo2") }
-        Action { text: qsTr("Foo3") }
+        title: qsTr("Views")
+        Action { text: qsTr("Connection Window") }
     }
 
     delegate: MenuBarItem {

@@ -7,18 +7,16 @@ Item {
     Connections {
         target: dataUpdater
 
-        // Old TableView method
-        /*function onLoadNewTable(data) {
-            tableView.model = data;
-        }*/
-
-        function onLoadNewTable(data) {
+        function onLoadNewTable(data, sortType) {
             // Clear old data
             listModel.clear();
 
             for (let item in data) {
                 //console.log("Data: ", item, " = ", data[item]);
-                listModel.addRow(item, data[item]);
+                if (sortType === 0)
+                    listModel.addRow(item, data[item]);
+                else
+                    listModel.addRow(data[item], item);
             }
 
             listView.currentIndex = -1
@@ -85,10 +83,19 @@ Item {
         }
 
         function onConnectedToDatabase(connected) {
-            toggleFields(connected);
+            if (!connected) {
+                toggleFields(false);
+                clearFields();
+                return;
+            }
+
+            // Enable only those fields available in this table method
+            changeTableMethod(tableBar.tableMethod, false);
         }
     }
 
+    // 0 = add, 1 = update, 2 = remove
+    property int tableMethod: 0
     property int databaseTextFieldSpacing: listRectangle.height / 6
     property int defaultTextFontSize: 15
 
@@ -110,7 +117,6 @@ Item {
 
     function toggleFields(toggle) {
         listView.enabled = toggle;
-        listView.opacity = toggle ? 1.0 : 0.5
         sortButtonId.enabled = toggle;
         sortButtonName.enabled = toggle;
         userFirstName.enabled = toggle;
@@ -123,6 +129,53 @@ Item {
         userCountry.enabled = toggle;
         userPhone.enabled = toggle;
         updateButton.enabled = toggle;
+    }
+
+    function changeTableMethod(method, clear) {
+        // Disable all fields
+        toggleFields(false);
+        // Clear all fields
+        if (clear)
+            clearFields();
+
+        switch (method) {
+            // Add method
+            case 0: {
+                userFirstName.enabled = true;
+                userLastName.enabled = true;
+                userEmail.enabled = true;
+                userId.enabled = true;
+                userAddress.enabled = true;
+                userPostalCode.enabled = true;
+                userCity.enabled = true;
+                userCountry.enabled = true;
+                userPhone.enabled = true;
+            } break;
+            // Update method
+            case 1: {
+                listView.enabled = true;
+                sortButtonId.enabled = true;
+                sortButtonName.enabled = true;
+                userFirstName.enabled = true;
+                userLastName.enabled = true;
+                userEmail.enabled = true;
+                userAddress.enabled = true;
+                userPostalCode.enabled = true;
+                userCity.enabled = true;
+                userCountry.enabled = true;
+                userPhone.enabled = true;
+            } break;
+            // Remove method
+            case 2: {
+                listView.enabled = true;
+                sortButtonId.enabled = true;
+                sortButtonName.enabled = true;
+            } break;
+            default: break;
+        }
+
+        updateButton.enabled = true;
+        tableMethod = method;
     }
 
     // Disable all fields when program is started
@@ -167,8 +220,6 @@ Item {
             }
         }
 
-
-
         Rectangle {
             id: listRectangle
 
@@ -209,11 +260,6 @@ Item {
                     id: listDelegate
                     width: listView.width
                     height: 40
-                    /*height: {
-                        var defaultHeight = listView.height * 0.17
-                        var minHeight = 30
-                        return defaultHeight < minHeight ? minHeight : defaultHeight
-                    }*/
 
                     Text {
                         width: parent.width * 0.3
@@ -245,13 +291,14 @@ Item {
                         anchors.fill: parent
                         onClicked: {
                             listView.currentIndex = index;
-                            console.log("index ", index, ", data[1]: ", userName);
+                            //console.log("index ", index, ", data[1]: ", userName);
                             dataUpdater.loadUserInfo(userId);
                         }
                     }
                 }
 
                 highlight: Rectangle { color: defaultBorderColor; radius: 5 }
+                opacity: enabled ? 1.0 : 0.5
                 focus: true
                 clip: true
             }
@@ -278,7 +325,7 @@ Item {
 
             RadioButton {
                 id: sortButtonId
-                Layout.fillWidth: true
+                width: parent / 2
                 checked: true
                 contentItem: Text {
                     leftPadding: parent.indicator.width + parent.spacing + 5
@@ -293,15 +340,15 @@ Item {
                         return;
 
                     parent.sortStyle = 0;
-                    dataUpdater.loadSqlTable(parent.sortStyle);
+                    dataUpdater.loadSqlTable(parent.sortStyle, false);
                     clearFields();
                 }
             }
 
             RadioButton {
                 id: sortButtonName
+                width: parent / 2
                 Layout.alignment: Qt.AlignRight
-                Layout.fillWidth: true
                 contentItem: Text {
                     leftPadding: parent.indicator.width + parent.spacing + 5
                     verticalAlignment: Text.AlignVCenter
@@ -315,7 +362,7 @@ Item {
                         return;
 
                     parent.sortStyle = 1;
-                    dataUpdater.loadSqlTable(parent.sortStyle);
+                    dataUpdater.loadSqlTable(parent.sortStyle, false);
                     clearFields();
                 }
             }
@@ -492,7 +539,7 @@ Item {
                 cityName = cityModel.get(currentIndex).text;
                 cityId = dataUpdater.getCityIdByName(cityName);
 
-                console.debug("Selected city: " + cityName + ", id: " + cityId);
+                console.log("Selected city: " + cityName + ", id: " + cityId);
             }
         }
 
@@ -535,7 +582,7 @@ Item {
                 countryName = countryModel.get(currentIndex).text;
                 countryId = dataUpdater.getCountryIdByName(countryName);
 
-                console.debug("Selected country: " + countryName + ", id: " + countryId);
+                console.log("Selected country: " + countryName + ", id: " + countryId);
 
                 userCity.currentIndex = -1;
                 dataUpdater.loadCitiesForCountryId(countryId);
@@ -569,13 +616,20 @@ Item {
             width: {
                 let minWidth = listRectangle.width / 2;
                 return implicitWidth < minWidth ? minWidth : implicitWidth;
-
             }
 
             anchors.top: userPhone.top
             anchors.left: userCountry.left
 
-            text: "UPDATE USER"
+            text: {
+                switch (tableMethod) {
+                    case 0: return "ADD USER";
+                    case 1: return "UPDATE USER";
+                    case 2: return "REMOVE USER";
+                    default: return "";
+                }
+            }
+
             font.pixelSize: 17
 
             contentItem: Text {
@@ -592,7 +646,7 @@ Item {
             }
 
             onClicked: {
-                if (listView.currentIndex == -1) {
+                if (tableMethod != 0 && listView.currentIndex == -1) {
                     console.log("No user selected");
                     return;
                 }
@@ -611,73 +665,31 @@ Item {
                 dataUpdater.userCountryId = userCountry.countryId;
                 dataUpdater.userPhoneNumber = userPhone.text;
 
-                if (dataUpdater.updateUser()) {
-                    let newName = dataUpdater.userLastname + ", " + dataUpdater.userFirstname;
-                    listModel.setProperty(listView.currentIndex, "userName", newName);
+                switch (tableMethod) {
+                    // Add user
+                    case 0: {
+                        dataUpdater.userIdField = userId.text;
+                        if (dataUpdater.addUser()) {
+                            let newName = dataUpdater.userLastname + ", " + dataUpdater.userFirstname;
+                            listModel.addRow(dataUpdater.userIdField, newName);
+                        }
+                    } break;
+                    // Update user
+                    case 1: {
+                        if (dataUpdater.updateUser()) {
+                            let newName = dataUpdater.userLastname + ", " + dataUpdater.userFirstname;
+                            listModel.setProperty(listView.currentIndex, "userName", newName);
+                        }
+                    } break;
+                    // Remove user
+                    case 2: {
+                        if (dataUpdater.removeUser()) {
+                            listModel.remove(listView.currentIndex);
+                        }
+                    } break;
+                    default: break;
                 }
             }
         }
-
-
-        // Old TableView
-        /*TableView {
-            id: tableView
-            anchors.fill: parent
-            anchors.margins: 2
-
-            columnSpacing: 1
-            rowSpacing: 1
-            clip: true
-
-            //columnWidthProvider: 50
-            //rowHeightProvider: 50
-
-            //model: tableModel
-
-            // Vertical scroll bar
-            ScrollBar.vertical: ScrollBar {
-                policy: ScrollBar.AlwaysOn
-            }
-
-            // Horizontal scroll bar
-            ScrollBar.horizontal: ScrollBar {
-                policy: ScrollBar.AlwaysOn
-            }
-
-            delegate: TextInput {
-                id: textInput
-                text: model.modelData
-                padding: 12
-                selectByMouse: true
-
-                onAccepted: model.display = text
-
-                Rectangle {
-                    anchors.fill: parent
-                    color: textInput.focus ? defaultContentBackgroundColor : "#FFFFFF"
-                    focus: true
-                    z: -1
-                }
-            }
-
-//            Row {
-//                id: columnsHeader
-//                y: tableView.contentY
-//                z: 2
-//                Repeater {
-//                    model: tableView.columns > 0 ? tableView.columns : 1
-//                    Label {
-//                        width: tableView.columnWidthProvider
-//                        height: tableView.rowHeightProvider
-//                        text: tableModel.headerData(modelData, Qt.Horizontal)
-//                        color: '#aaaaaa'
-//                        font.pixelSize: 15
-//                        padding: 10
-//                        verticalAlignment: Text.AlignVCe
-//                        background: Rectangle { color: "#333333" }
-//                    }
-//                }
-//            }
-        }*/
     }
 }
