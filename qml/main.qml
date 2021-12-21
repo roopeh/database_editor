@@ -19,11 +19,6 @@ ApplicationWindow {
     // Qt C++ classes
     DataUpdater {
         id: dataUpdater
-        dbHostname: databaseList.getDbHostname()
-        dbUsername: databaseList.getDbUsername()
-        dbPassword: databaseList.getDbPassword()
-        dbDatabase: databaseList.getDbDatabase()
-        dbPort: databaseList.getDbPort()
     }
 
     // Global variables

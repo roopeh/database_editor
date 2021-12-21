@@ -2,13 +2,19 @@ import QtQuick
 import QtQuick.Controls
 
 Item {
+    Connections {
+        target: dataUpdater
 
-    // Connection getter functions
-    function getDbHostname() { return databaseHostname.text }
-    function getDbUsername() { return databaseUsername.text }
-    function getDbPassword() { return databasePassword.text }
-    function getDbDatabase() { return databaseDb.text }
-    function getDbPort() { return databasePort.text }
+        function onConnectedToDatabase(connected) {
+            databaseHostname.enabled = !connected;
+            databaseUsername.enabled = !connected;
+            databasePassword.enabled = !connected;
+            databaseDb.enabled = !connected;
+            databasePort.enabled = !connected;
+        }
+    }
+
+    property int defaultFontSize: 14
 
     // Outer background
     Rectangle {
@@ -44,6 +50,7 @@ Item {
                     anchors.left: parent.left
 
                     text: "Hostname"
+                    font.pixelSize: defaultFontSize
                     color: defaultTextColor
                 }
 
@@ -54,6 +61,9 @@ Item {
                     anchors.topMargin: 5
                     anchors.left: parent.left
                     anchors.leftMargin: width * 0.05
+
+                    text: dataUpdater.dbHostname
+                    font.pixelSize: defaultFontSize
                 }
 
                 Text {
@@ -63,6 +73,7 @@ Item {
                     anchors.left: parent.left
 
                     text: "Username"
+                    font.pixelSize: defaultFontSize
                     color: defaultTextColor
                 }
 
@@ -73,6 +84,9 @@ Item {
                     anchors.topMargin: 5
                     anchors.left: parent.left
                     anchors.leftMargin: width * 0.05
+
+                    text: dataUpdater.dbUsername
+                    font.pixelSize: defaultFontSize
                 }
 
                 Text {
@@ -82,6 +96,7 @@ Item {
                     anchors.left: parent.left
 
                     text: "Password"
+                    font.pixelSize: defaultFontSize
                     color: defaultTextColor
                 }
 
@@ -93,6 +108,8 @@ Item {
                     anchors.left: parent.left
                     anchors.leftMargin: width * 0.05
 
+                    text: dataUpdater.dbPassword
+                    font.pixelSize: defaultFontSize
                     echoMode: TextInput.Password
                 }
 
@@ -103,6 +120,7 @@ Item {
                     anchors.left: parent.left
 
                     text: "Database"
+                    font.pixelSize: defaultFontSize
                     color: defaultTextColor
                 }
 
@@ -113,6 +131,9 @@ Item {
                     anchors.topMargin: 5
                     anchors.left: parent.left
                     anchors.leftMargin: width * 0.05
+
+                    text: dataUpdater.dbDatabase
+                    font.pixelSize: defaultFontSize
                 }
 
                 Text {
@@ -122,6 +143,7 @@ Item {
                     anchors.left: parent.left
 
                     text: "Port"
+                    font.pixelSize: defaultFontSize
                     color: defaultTextColor
                 }
 
@@ -132,9 +154,12 @@ Item {
                     anchors.topMargin: 5
                     anchors.left: parent.left
                     anchors.leftMargin: width * 0.05
+
+                    text: dataUpdater.dbPort
+                    font.pixelSize: defaultFontSize
                 }
 
-                Button {
+                /*Button {
                     width: parent.width * 0.3
                     height: width / 2
                     anchors.left: parent.left
@@ -142,16 +167,40 @@ Item {
                     text: "Query"
 
                     onClicked: queryWindow.testLog()
-                }
+                }*/
 
                 Button {
-                    width: parent.width * 0.3
-                    height: width / 2
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    text: "Data"
+                    id: connectButton
+                    width: databaseHostname.width * 0.5
+                    anchors.top: databasePort.bottom
+                    anchors.topMargin: 40
+                    anchors.horizontalCenter: databasePort.horizontalCenter
+                    text: "CONNECT"
+                    font.pixelSize: defaultFontSize
 
-                    onClicked: dataUpdater.loadSqlTable()
+                    contentItem: Text {
+                        text: connectButton.text
+                        font: connectButton.text
+                        color: defaultTextColor
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
+                    }
+
+                    background: Rectangle {
+                        color: defaultMainBackgroundColor
+                    }
+
+                    onClicked: {
+                        // Send database connection info to Qt
+                        dataUpdater.dbHostname = databaseHostname.text
+                        dataUpdater.dbUsername = databaseUsername.text
+                        dataUpdater.dbPassword = databasePassword.text
+                        dataUpdater.dbDatabase = databaseDb.text
+                        dataUpdater.dbPort = databasePort.text
+
+                        dataUpdater.loadSqlTable(0)
+                    }
                 }
             }
         }
